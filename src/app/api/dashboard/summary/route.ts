@@ -291,10 +291,14 @@ export async function GET(request: Request) {
         moves: recentMoves,
       },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Dashboard summary error:', error)
+    console.error('Error details:', error.message, error.stack)
     return NextResponse.json(
-      { error: 'Failed to fetch dashboard summary' },
+      { 
+        error: 'Failed to fetch dashboard summary',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }

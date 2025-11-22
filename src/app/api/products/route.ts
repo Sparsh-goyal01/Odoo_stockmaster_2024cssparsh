@@ -89,10 +89,14 @@ export async function GET(request: Request) {
         pages: Math.ceil(total / limit),
       },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get products error:', error)
+    console.error('Error details:', error.message, error.stack)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }
@@ -213,10 +217,14 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(createdProduct, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create product error:', error)
+    console.error('Error details:', error.message, error.stack)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }

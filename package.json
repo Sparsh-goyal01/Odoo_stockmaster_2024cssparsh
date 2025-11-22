@@ -4,21 +4,23 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "prisma:push": "prisma db push"
+    "prisma:push": "prisma db push",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@prisma/client": "^5.10.0",
+    "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.0",
     "date-fns": "^3.3.0",
     "jsonwebtoken": "^9.0.2",
     "next": "^14.2.0",
+    "prisma": "^5.22.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-hot-toast": "^2.6.0",
@@ -33,7 +35,6 @@
     "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",
-    "prisma": "^5.10.0",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.0"
   }

@@ -36,8 +36,8 @@ export async function GET(request: Request) {
 
     // ========== KPIs ==========
 
-    // Total Products in Stock (with StockQuant > 0)
-    const productsWithStock = await prisma.product.findMany({
+    // Fetch all active products with their stock quants
+    const allProducts = await prisma.product.findMany({
       where: productWhere,
       include: {
         stockQuants: warehouseId
@@ -52,7 +52,8 @@ export async function GET(request: Request) {
       },
     })
 
-    const totalProducts = productsWithStock.filter((product: any) => {
+    // Total Products in Stock (with StockQuant > 0)
+    const totalProducts = allProducts.filter((product: any) => {
       const totalStock = product.stockQuants.reduce(
         (sum: number, sq: any) => sum + Number(sq.quantity),
         0
@@ -105,8 +106,12 @@ export async function GET(request: Request) {
     }
     lowStock = uniqueLowStockProducts.size
 
-    // Out of Stock Items
-    const outOfStock = productsWithStock.filter((product: any) => {
+    // Out of Stock Items - Only count products that have stock quants but current quantity is 0
+    // This means they've been received before but are now out of stock
+    const outOfStock = allProducts.filter((product: any) => {
+      // Must have at least one stock quant record (meaning stock was tracked)
+      if (product.stockQuants.length === 0) return false
+      
       const totalStock = product.stockQuants.reduce(
         (sum: number, sq: any) => sum + Number(sq.quantity),
         0

@@ -11,16 +11,21 @@
 
 Add these environment variables in your Vercel project settings:
 
+**Go to: Vercel Dashboard → Your Project → Settings → Environment Variables**
+
+Add the following:
+
 ```env
-DATABASE_URL="mysql://USER:PASSWORD@HOST:PORT/DATABASE"
-JWT_SECRET="your-super-secret-jwt-key-minimum-32-characters-long"
+DATABASE_URL="mysql://root:WatvEDcXOVgKWqqvonMaNXSlwahlVrAu@ballast.proxy.rlwy.net:34937/railway"
+JWT_SECRET="stockmaster-jwt-secret-key-change-in-production-2024"
 NEXT_PUBLIC_APP_URL="https://your-app.vercel.app"
 ```
 
 **Important Notes:**
-- `DATABASE_URL`: Get this from your MySQL provider
-- `JWT_SECRET`: Generate a strong random string (at least 32 characters)
-- `NEXT_PUBLIC_APP_URL`: Your Vercel deployment URL
+- `DATABASE_URL`: Railway MySQL database URL (already configured above)
+- `JWT_SECRET`: Strong random string for JWT token signing
+- `NEXT_PUBLIC_APP_URL`: Your actual Vercel deployment URL (e.g., https://odoo-stockmaster-2024cssparsh.vercel.app)
+- Make sure to set these for **Production**, **Preview**, and **Development** environments
 
 ### 3. Database Setup
 

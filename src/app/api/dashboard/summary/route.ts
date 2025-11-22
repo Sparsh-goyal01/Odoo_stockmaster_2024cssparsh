@@ -66,12 +66,15 @@ export async function GET(request: Request) {
 
     // Low Stock Items (compared against reorder rules)
     const reorderRulesWhere: any = {
-      userId: user.userId
+      product: {
+        userId: user.userId,
+        isActive: true
+      }
     }
     if (warehouseId) {
       reorderRulesWhere.OR = [
-        { warehouseId: parseInt(warehouseId), userId: user.userId },
-        { warehouseId: null, userId: user.userId }, // Global rules
+        { warehouseId: parseInt(warehouseId) },
+        { warehouseId: null }, // Global rules
       ]
     }
 

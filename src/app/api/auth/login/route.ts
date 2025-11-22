@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { comparePassword } from '@/lib/auth'
 import { signToken } from '@/lib/jwt'
@@ -48,8 +49,22 @@ export async function POST(request: Request) {
       role: user.role,
     })
 
-    // Set cookie
-    const response = NextResponse.json({
+    // Set cookie using next/headers cookies() - proper way in Next.js 14+
+    const cookieStore = await cookies()
+    cookieStore.set({
+      name: 'token',
+      value: token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    })
+
+    console.log('[Login API] Cookie set for user:', user.email)
+
+    // Create response
+    return NextResponse.json({
       message: 'Login successful',
       user: {
         id: user.id,
@@ -58,16 +73,6 @@ export async function POST(request: Request) {
         role: user.role,
       },
     })
-
-    response.cookies.set('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
-    })
-
-    return response
   } catch (error) {
     console.error('Login error:', error)
     return NextResponse.json(

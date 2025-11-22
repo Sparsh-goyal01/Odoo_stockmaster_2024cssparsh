@@ -72,10 +72,10 @@ export async function GET(request: NextRequest) {
           destinationLocation: {
             include: { warehouse: true },
           },
-          createdByUser: {
+          creator: {
             select: { id: true, name: true, email: true },
           },
-          validatedByUser: {
+          validator: {
             select: { id: true, name: true, email: true },
           },
           lines: {

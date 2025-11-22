@@ -73,7 +73,6 @@ export async function GET(request: Request) {
       where: reorderRulesWhere,
       include: {
         product: {
-          where: productWhere,
           include: {
             stockQuants: warehouseId
               ? {
@@ -157,7 +156,7 @@ export async function GET(request: Request) {
       select: {
         id: true,
         documentNumber: true,
-        vendor: true,
+        partnerName: true,
         status: true,
         validatedAt: true,
         warehouse: {
@@ -180,7 +179,7 @@ export async function GET(request: Request) {
       select: {
         id: true,
         documentNumber: true,
-        customer: true,
+        partnerName: true,
         status: true,
         validatedAt: true,
         warehouse: {

@@ -3,6 +3,7 @@
 import { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'react-hot-toast'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 
@@ -23,23 +24,30 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include',
       })
 
       const data = await response.json()
 
       if (!response.ok) {
         setError(data.error || 'Login failed')
+        setLoading(false)
         return
       }
 
-      router.push('/dashboard')
-      router.refresh()
+      // Login successful - redirect to dashboard
+      console.log('[Login] Success! Cookie should be set. Redirecting...');
+      toast.success('Login successful!');
+      // Use router to navigate
+      router.push('/dashboard');
+      // Optionally refresh
+      router.refresh();
     } catch (err) {
-      setError('An error occurred. Please try again.')
-    } finally {
-      setLoading(false)
+      console.error('Login error:', err);
+      setError('An error occurred. Please try again.');
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
@@ -109,5 +117,5 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
-  )
+  );
 }

@@ -112,7 +112,7 @@ export async function GET(request: Request) {
               name: true,
             },
           },
-          createdByUser: {
+          creator: {
             select: {
               name: true,
             },

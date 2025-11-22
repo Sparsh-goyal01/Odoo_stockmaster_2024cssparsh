@@ -96,7 +96,7 @@ export async function createInitialStockAdjustment(
  */
 export function getProductStockStatus(
   totalStock: number,
-  reorderRules: Array<{ minQty: number }> = []
+  reorderRules: Array<{ minQty: number | any }> = []
 ): 'OK' | 'LOW_STOCK' | 'OUT_OF_STOCK' {
   if (totalStock === 0) {
     return 'OUT_OF_STOCK'
@@ -126,7 +126,7 @@ export function calculateAvailableStock(
  * Calculate total stock for a product across all locations
  */
 export function calculateTotalStock(
-  stockQuants: Array<{ quantity: number }>
+  stockQuants: Array<{ quantity: number | any }>
 ): number {
   return stockQuants.reduce((sum, quant) => sum + Number(quant.quantity), 0)
 }

@@ -16,26 +16,32 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    console.log('Submitting signup form')
     setError('')
     setLoading(true)
 
     try {
+      console.log('Sending request to /api/auth/signup')
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
       })
+      console.log('Response received', response.status)
 
       const data = await response.json()
+      console.log('Response data', data)
 
       if (!response.ok) {
         setError(data.error || 'Signup failed')
         return
       }
 
+      console.log('Signup successful, redirecting')
       router.push('/dashboard')
       router.refresh()
     } catch (err) {
+      console.error('Signup error', err)
       setError('An error occurred. Please try again.')
     } finally {
       setLoading(false)

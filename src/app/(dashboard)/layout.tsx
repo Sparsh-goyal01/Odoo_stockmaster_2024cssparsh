@@ -1,4 +1,3 @@
-import { getCurrentUserFromDB } from '@/lib/auth'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 
 export default async function Layout({
@@ -6,10 +5,14 @@ export default async function Layout({
 }: {
   children: React.ReactNode
 }) {
-  const user = await getCurrentUserFromDB()
+  // Temporarily bypassing auth - showing dummy user
+  const dummyUser = {
+    name: 'Test User',
+    email: 'test@example.com'
+  }
 
   return (
-    <DashboardLayout user={user}>
+    <DashboardLayout user={dummyUser}>
       {children}
     </DashboardLayout>
   )

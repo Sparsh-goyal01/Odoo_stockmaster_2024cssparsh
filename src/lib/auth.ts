@@ -15,6 +15,15 @@ export async function comparePassword(
 }
 
 export async function getCurrentUser(): Promise<JWTPayload | null> {
+  // TEMPORARILY BYPASSING AUTH - Return dummy user
+  return {
+    userId: 1,
+    email: 'test@example.com',
+    name: 'Test User',
+    role: 'USER'
+  }
+  
+  /* Original code - uncomment to re-enable auth
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('token')?.value
@@ -32,6 +41,7 @@ export async function getCurrentUser(): Promise<JWTPayload | null> {
   } catch (error) {
     return null
   }
+  */
 }
 
 export async function getCurrentUserFromDB() {

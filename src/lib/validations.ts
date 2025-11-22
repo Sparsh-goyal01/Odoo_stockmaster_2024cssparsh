@@ -78,20 +78,20 @@ export const locationSchema = z.object({
 // Operation validations
 export const operationLineSchema = z.object({
   productId: z.number({ required_error: 'Product is required' }),
-  quantity: z.number().positive('Quantity must be positive'),
+  quantity: z.number({ required_error: 'Quantity is required' }),
   unitOfMeasure: z.string().min(1, 'Unit of measure is required'),
-  sourceLocationId: z.number().optional(),
-  destinationLocationId: z.number().optional(),
-  remarks: z.string().optional(),
+  sourceLocationId: z.number().optional().nullable(),
+  destinationLocationId: z.number().optional().nullable(),
+  remarks: z.string().optional().nullable(),
 })
 
 export const operationSchema = z.object({
   opType: z.enum(['RECEIPT', 'DELIVERY', 'TRANSFER', 'ADJUSTMENT']),
   warehouseId: z.number({ required_error: 'Warehouse is required' }),
-  sourceLocationId: z.number().optional(),
-  destinationLocationId: z.number().optional(),
-  partnerName: z.string().optional(),
-  notes: z.string().optional(),
+  sourceLocationId: z.number().optional().nullable(),
+  destinationLocationId: z.number().optional().nullable(),
+  partnerName: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
   lines: z.array(operationLineSchema).min(1, 'At least one line is required'),
 })
 

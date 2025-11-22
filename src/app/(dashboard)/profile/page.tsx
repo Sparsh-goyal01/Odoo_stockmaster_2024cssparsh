@@ -1,7 +1,6 @@
 'use client'
 
 import Card from '@/components/ui/Card'
-import { getCurrentUserFromDB } from '@/lib/auth'
 
 export default function ProfilePage() {
   return (

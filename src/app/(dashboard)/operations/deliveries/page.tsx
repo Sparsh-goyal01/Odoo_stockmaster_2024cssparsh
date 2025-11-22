@@ -56,6 +56,7 @@ export default function DeliveriesPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [editingDelivery, setEditingDelivery] = useState<Delivery | null>(null)
   const [formData, setFormData] = useState({
     warehouseId: '',
     sourceLocationId: '',
@@ -130,6 +131,7 @@ export default function DeliveriesPage() {
       toast.error('Please create products first')
       return
     }
+    setEditingDelivery(null)
     setFormData({
       warehouseId: warehouses[0]?.id.toString() || '',
       sourceLocationId: '',
@@ -167,6 +169,53 @@ export default function DeliveriesPage() {
     setLines(newLines)
   }
 
+  const handleEdit = async (delivery: Delivery) => {
+    setEditingDelivery(delivery)
+    setFormData({
+      warehouseId: delivery.warehouse.id.toString(),
+      sourceLocationId: delivery.sourceLocation?.id.toString() || '',
+      partnerName: delivery.partnerName || '',
+      notes: delivery.notes || '',
+    })
+    
+    // Fetch locations for the warehouse
+    await fetchLocations(delivery.warehouse.id)
+    
+    // Set lines
+    setLines(delivery.lines.map(line => ({
+      productId: line.product.id,
+      quantity: Number(line.quantity),
+      unitOfMeasure: line.unitOfMeasure,
+      sourceLocationId: line.sourceLocation?.id || null,
+      remarks: line.remarks || '',
+    })))
+    
+    setShowModal(true)
+  }
+
+  const handleDelete = async (deliveryId: number) => {
+    if (!confirm('Are you sure you want to delete this delivery? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/operations/deliveries/${deliveryId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete delivery')
+      }
+
+      toast.success('Delivery deleted successfully')
+      fetchDeliveries()
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -178,8 +227,14 @@ export default function DeliveriesPage() {
     setSubmitting(true)
 
     try {
-      const response = await fetch('/api/operations/deliveries', {
-        method: 'POST',
+      const url = editingDelivery 
+        ? `/api/operations/deliveries/${editingDelivery.id}`
+        : '/api/operations/deliveries'
+      
+      const method = editingDelivery ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           warehouseId: parseInt(formData.warehouseId),
@@ -199,10 +254,10 @@ export default function DeliveriesPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create delivery')
+        throw new Error(data.error || `Failed to ${editingDelivery ? 'update' : 'create'} delivery`)
       }
 
-      toast.success('Delivery created!')
+      toast.success(`Delivery ${editingDelivery ? 'updated' : 'created'} successfully!`)
       setShowModal(false)
       fetchDeliveries()
     } catch (error: any) {
@@ -307,14 +362,28 @@ export default function DeliveriesPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(delivery.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                       {delivery.status === 'DRAFT' && (
-                        <button
-                          onClick={() => handleValidate(delivery.id)}
-                          className="text-green-600 hover:text-green-900"
-                        >
-                          Validate
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleEdit(delivery)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleValidate(delivery.id)}
+                            className="text-green-600 hover:text-green-900"
+                          >
+                            Validate
+                          </button>
+                          <button
+                            onClick={() => handleDelete(delivery.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </>
                       )}
                     </td>
                   </tr>
@@ -330,7 +399,9 @@ export default function DeliveriesPage() {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
             <div className="mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Create Delivery</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                {editingDelivery ? 'Edit Delivery' : 'Create Delivery'}
+              </h3>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -451,7 +522,7 @@ export default function DeliveriesPage() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? 'Creating...' : 'Create Delivery'}
+                  {submitting ? 'Saving...' : editingDelivery ? 'Update Delivery' : 'Create Delivery'}
                 </Button>
               </div>
             </form>

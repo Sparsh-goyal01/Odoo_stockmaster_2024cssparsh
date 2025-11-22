@@ -56,6 +56,7 @@ export default function ReceiptsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [editingReceipt, setEditingReceipt] = useState<Receipt | null>(null)
   const [formData, setFormData] = useState({
     warehouseId: '',
     destinationLocationId: '',
@@ -130,6 +131,7 @@ export default function ReceiptsPage() {
       toast.error('Please create products first')
       return
     }
+    setEditingReceipt(null)
     setFormData({
       warehouseId: warehouses[0]?.id.toString() || '',
       destinationLocationId: '',
@@ -167,6 +169,53 @@ export default function ReceiptsPage() {
     setLines(newLines)
   }
 
+  const handleEdit = async (receipt: Receipt) => {
+    setEditingReceipt(receipt)
+    setFormData({
+      warehouseId: receipt.warehouse.id.toString(),
+      destinationLocationId: receipt.destinationLocation?.id.toString() || '',
+      partnerName: receipt.partnerName || '',
+      notes: receipt.notes || '',
+    })
+    
+    // Fetch locations for the warehouse
+    await fetchLocations(receipt.warehouse.id)
+    
+    // Set lines
+    setLines(receipt.lines.map(line => ({
+      productId: line.product.id,
+      quantity: Number(line.quantity),
+      unitOfMeasure: line.unitOfMeasure,
+      destinationLocationId: line.destinationLocation?.id || null,
+      remarks: line.remarks || '',
+    })))
+    
+    setShowModal(true)
+  }
+
+  const handleDelete = async (receiptId: number) => {
+    if (!confirm('Are you sure you want to delete this receipt? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/operations/receipts/${receiptId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete receipt')
+      }
+
+      toast.success('Receipt deleted successfully')
+      fetchReceipts()
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -178,8 +227,14 @@ export default function ReceiptsPage() {
     setSubmitting(true)
 
     try {
-      const response = await fetch('/api/operations/receipts', {
-        method: 'POST',
+      const url = editingReceipt 
+        ? `/api/operations/receipts/${editingReceipt.id}`
+        : '/api/operations/receipts'
+      
+      const method = editingReceipt ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           warehouseId: parseInt(formData.warehouseId),
@@ -199,10 +254,10 @@ export default function ReceiptsPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create receipt')
+        throw new Error(data.error || `Failed to ${editingReceipt ? 'update' : 'create'} receipt`)
       }
 
-      toast.success('Receipt created!')
+      toast.success(`Receipt ${editingReceipt ? 'updated' : 'created'} successfully!`)
       setShowModal(false)
       fetchReceipts()
     } catch (error: any) {
@@ -307,14 +362,28 @@ export default function ReceiptsPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(receipt.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                       {receipt.status === 'DRAFT' && (
-                        <button
-                          onClick={() => handleValidate(receipt.id)}
-                          className="text-green-600 hover:text-green-900"
-                        >
-                          Validate
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleEdit(receipt)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleValidate(receipt.id)}
+                            className="text-green-600 hover:text-green-900"
+                          >
+                            Validate
+                          </button>
+                          <button
+                            onClick={() => handleDelete(receipt.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </>
                       )}
                     </td>
                   </tr>
@@ -330,7 +399,9 @@ export default function ReceiptsPage() {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
             <div className="mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Create Receipt</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                {editingReceipt ? 'Edit Receipt' : 'Create Receipt'}
+              </h3>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -451,7 +522,7 @@ export default function ReceiptsPage() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? 'Creating...' : 'Create Receipt'}
+                  {submitting ? 'Saving...' : editingReceipt ? 'Update Receipt' : 'Create Receipt'}
                 </Button>
               </div>
             </form>

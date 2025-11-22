@@ -54,6 +54,7 @@ export default function AdjustmentsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [editingAdjustment, setEditingAdjustment] = useState<Adjustment | null>(null)
   const [formData, setFormData] = useState({
     warehouseId: '',
     destinationLocationId: '',
@@ -127,13 +128,14 @@ export default function AdjustmentsPage() {
       toast.error('Please create products first')
       return
     }
+    setEditingAdjustment(null)
     setFormData({
       warehouseId: warehouses[0]?.id.toString() || '',
       destinationLocationId: '',
       notes: '',
     })
     setLines([
-      { productId: 0, quantity: 0, unitOfMeasure: '', destinationLocationId: null, remarks: '' },
+      { productId: 0, quantity: 1, unitOfMeasure: '', destinationLocationId: null, remarks: '' },
     ])
     setShowModal(true)
   }
@@ -163,6 +165,52 @@ export default function AdjustmentsPage() {
     setLines(newLines)
   }
 
+  const handleEdit = async (adjustment: Adjustment) => {
+    setEditingAdjustment(adjustment)
+    setFormData({
+      warehouseId: adjustment.warehouse.id.toString(),
+      destinationLocationId: adjustment.destinationLocation?.id.toString() || '',
+      notes: adjustment.notes || '',
+    })
+    
+    // Fetch locations for the warehouse
+    await fetchLocations(adjustment.warehouse.id)
+    
+    // Set lines
+    setLines(adjustment.lines.map(line => ({
+      productId: line.product!.id,
+      quantity: Number(line.quantity),
+      unitOfMeasure: line.unitOfMeasure,
+      destinationLocationId: line.destinationLocation?.id || null,
+      remarks: line.remarks || '',
+    })))
+    
+    setShowModal(true)
+  }
+
+  const handleDelete = async (adjustmentId: number) => {
+    if (!confirm('Are you sure you want to delete this adjustment? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/operations/adjustments/${adjustmentId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete adjustment')
+      }
+
+      toast.success('Adjustment deleted successfully')
+      fetchAdjustments()
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -174,8 +222,14 @@ export default function AdjustmentsPage() {
     setSubmitting(true)
 
     try {
-      const response = await fetch('/api/operations/adjustments', {
-        method: 'POST',
+      const url = editingAdjustment 
+        ? `/api/operations/adjustments/${editingAdjustment.id}`
+        : '/api/operations/adjustments'
+      
+      const method = editingAdjustment ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           warehouseId: parseInt(formData.warehouseId),
@@ -194,10 +248,10 @@ export default function AdjustmentsPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create adjustment')
+        throw new Error(data.error || `Failed to ${editingAdjustment ? 'update' : 'create'} adjustment`)
       }
 
-      toast.success('Adjustment created!')
+      toast.success(`Adjustment ${editingAdjustment ? 'updated' : 'created'} successfully!`)
       setShowModal(false)
       fetchAdjustments()
     } catch (error: any) {
@@ -252,6 +306,7 @@ export default function AdjustmentsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -273,6 +328,24 @@ export default function AdjustmentsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(adjustment.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                      {adjustment.status === 'DRAFT' && (
+                        <>
+                          <button
+                            onClick={() => handleEdit(adjustment)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(adjustment.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -401,7 +474,7 @@ export default function AdjustmentsPage() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? 'Creating...' : 'Create Adjustment'}
+                  {submitting ? 'Saving...' : editingAdjustment ? 'Update Adjustment' : 'Create Adjustment'}
                 </Button>
               </div>
             </form>

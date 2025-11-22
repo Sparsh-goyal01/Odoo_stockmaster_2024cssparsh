@@ -57,6 +57,7 @@ export default function TransfersPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null)
   const [formData, setFormData] = useState({
     warehouseId: '',
     sourceLocationId: '',
@@ -131,6 +132,7 @@ export default function TransfersPage() {
       toast.error('Please create products first')
       return
     }
+    setEditingTransfer(null)
     setFormData({
       warehouseId: warehouses[0]?.id.toString() || '',
       sourceLocationId: '',
@@ -168,6 +170,54 @@ export default function TransfersPage() {
     setLines(newLines)
   }
 
+  const handleEdit = async (transfer: Transfer) => {
+    setEditingTransfer(transfer)
+    setFormData({
+      warehouseId: transfer.warehouse.id.toString(),
+      sourceLocationId: transfer.sourceLocation?.id.toString() || '',
+      destinationLocationId: transfer.destinationLocation?.id.toString() || '',
+      notes: transfer.notes || '',
+    })
+    
+    // Fetch locations for the warehouse
+    await fetchLocations(transfer.warehouse.id)
+    
+    // Set lines
+    setLines(transfer.lines.map(line => ({
+      productId: line.product!.id,
+      quantity: Number(line.quantity),
+      unitOfMeasure: line.unitOfMeasure,
+      sourceLocationId: line.sourceLocation?.id || null,
+      destinationLocationId: line.destinationLocation?.id || null,
+      remarks: line.remarks || '',
+    })))
+    
+    setShowModal(true)
+  }
+
+  const handleDelete = async (transferId: number) => {
+    if (!confirm('Are you sure you want to delete this transfer? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/operations/transfers/${transferId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete transfer')
+      }
+
+      toast.success('Transfer deleted successfully')
+      fetchTransfers()
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -179,8 +229,14 @@ export default function TransfersPage() {
     setSubmitting(true)
 
     try {
-      const response = await fetch('/api/operations/transfers', {
-        method: 'POST',
+      const url = editingTransfer 
+        ? `/api/operations/transfers/${editingTransfer.id}`
+        : '/api/operations/transfers'
+      
+      const method = editingTransfer ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           warehouseId: parseInt(formData.warehouseId),
@@ -201,10 +257,10 @@ export default function TransfersPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create transfer')
+        throw new Error(data.error || `Failed to ${editingTransfer ? 'update' : 'create'} transfer`)
       }
 
-      toast.success('Transfer created!')
+      toast.success(`Transfer ${editingTransfer ? 'updated' : 'created'} successfully!`)
       setShowModal(false)
       fetchTransfers()
     } catch (error: any) {
@@ -260,6 +316,7 @@ export default function TransfersPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -285,6 +342,24 @@ export default function TransfersPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(transfer.createdAt).toLocaleDateString()}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                      {transfer.status === 'DRAFT' && (
+                        <>
+                          <button
+                            onClick={() => handleEdit(transfer)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(transfer.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -298,7 +373,9 @@ export default function TransfersPage() {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
             <div className="mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Create Transfer</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                {editingTransfer ? 'Edit Transfer' : 'Create Transfer'}
+              </h3>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -426,7 +503,7 @@ export default function TransfersPage() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? 'Creating...' : 'Create Transfer'}
+                  {submitting ? 'Saving...' : editingTransfer ? 'Update Transfer' : 'Create Transfer'}
                 </Button>
               </div>
             </form>

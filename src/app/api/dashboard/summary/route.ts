@@ -29,7 +29,10 @@ export async function GET(request: Request) {
     }
 
     // Build filters for products
-    const productWhere: any = { isActive: true }
+    const productWhere: any = { 
+      isActive: true,
+      userId: user.userId 
+    }
     if (categoryId) {
       productWhere.categoryId = parseInt(categoryId)
     }
@@ -62,11 +65,13 @@ export async function GET(request: Request) {
     }).length
 
     // Low Stock Items (compared against reorder rules)
-    const reorderRulesWhere: any = {}
+    const reorderRulesWhere: any = {
+      userId: user.userId
+    }
     if (warehouseId) {
       reorderRulesWhere.OR = [
-        { warehouseId: parseInt(warehouseId) },
-        { warehouseId: null }, // Global rules
+        { warehouseId: parseInt(warehouseId), userId: user.userId },
+        { warehouseId: null, userId: user.userId }, // Global rules
       ]
     }
 
@@ -122,6 +127,13 @@ export async function GET(request: Request) {
     // Pending Operations (not DONE or CANCELED)
     const pendingStatuses = ['DRAFT', 'WAITING', 'READY']
 
+    // Get user's warehouse IDs for filtering operations
+    const userWarehouses = await prisma.warehouse.findMany({
+      where: { userId: user.userId, isActive: true } as any,
+      select: { id: true },
+    })
+    const warehouseIds = userWarehouses.map((w: any) => w.id)
+
     const [pendingReceipts, pendingDeliveries, pendingTransfers] =
       await Promise.all([
         prisma.operation.count({
@@ -129,6 +141,7 @@ export async function GET(request: Request) {
             ...operationWhere,
             opType: 'RECEIPT',
             status: opType || status ? operationWhere.status : { in: pendingStatuses },
+            warehouseId: { in: warehouseIds },
           },
         }),
         prisma.operation.count({
@@ -136,6 +149,7 @@ export async function GET(request: Request) {
             ...operationWhere,
             opType: 'DELIVERY',
             status: opType || status ? operationWhere.status : { in: pendingStatuses },
+            warehouseId: { in: warehouseIds },
           },
         }),
         prisma.operation.count({
@@ -143,6 +157,7 @@ export async function GET(request: Request) {
             ...operationWhere,
             opType: 'TRANSFER',
             status: opType || status ? operationWhere.status : { in: pendingStatuses },
+            warehouseId: { in: warehouseIds },
           },
         }),
       ])
@@ -155,6 +170,7 @@ export async function GET(request: Request) {
         ...(warehouseId && { warehouseId: parseInt(warehouseId) }),
         opType: 'RECEIPT',
         status: 'DONE',
+        warehouseId: { in: warehouseIds },
       },
       take: 5,
       orderBy: { validatedAt: 'desc' },
@@ -178,6 +194,7 @@ export async function GET(request: Request) {
         ...(warehouseId && { warehouseId: parseInt(warehouseId) }),
         opType: 'DELIVERY',
         status: 'DONE',
+        warehouseId: { in: warehouseIds },
       },
       take: 5,
       orderBy: { validatedAt: 'desc' },
@@ -196,16 +213,18 @@ export async function GET(request: Request) {
     })
 
     // Recent Stock Moves (latest 5)
-    const recentMovesWhere: any = {}
-    if (warehouseId) {
-      // Get all locations in this warehouse
-      const locations = await prisma.location.findMany({
-        where: { warehouseId: parseInt(warehouseId) },
-        select: { id: true },
-      })
-      const locationIds = locations.map((l: any) => l.id)
+    // Get all locations belonging to user's warehouses
+    const userLocations = await prisma.location.findMany({
+      where: {
+        warehouseId: { in: warehouseIds },
+        ...(warehouseId && { warehouseId: parseInt(warehouseId) }),
+      },
+      select: { id: true },
+    })
+    const locationIds = userLocations.map((l: any) => l.id)
 
-      recentMovesWhere.OR = [
+    const recentMovesWhere: any = {
+      OR: [
         { fromLocationId: { in: locationIds } },
         { toLocationId: { in: locationIds } },
       ]

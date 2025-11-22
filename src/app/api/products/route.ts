@@ -115,7 +115,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { name, sku, categoryId, unitOfMeasure, isActive, initialStock, reorderRule } = validation.data
+    const { name, sku, categoryId, unitOfMeasure, price, isActive, initialStock, reorderRule } = validation.data
 
     // Check if SKU already exists for this user
     const existingProduct = await prisma.product.findFirst({
@@ -163,6 +163,7 @@ export async function POST(request: Request) {
           sku,
           categoryId: categoryId || null,
           unitOfMeasure,
+          price: price || null,
           isActive: isActive !== undefined ? isActive : true,
           userId: user.userId,
         },

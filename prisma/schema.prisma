@@ -63,6 +63,7 @@ model Product {
   categoryId      Int?
   userId          Int
   unitOfMeasure   String          @db.VarChar(50)
+  price           Decimal?        @db.Decimal(10, 2)
   isActive        Boolean         @default(true)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt

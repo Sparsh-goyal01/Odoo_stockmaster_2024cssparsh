@@ -26,6 +26,8 @@ interface Product {
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [warehouses, setWarehouses] = useState<any[]>([])
+  const [locations, setLocations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -34,13 +36,23 @@ export default function ProductsPage() {
     sku: '',
     categoryId: '',
     unitOfMeasure: 'Units',
+    price: '',
     isActive: true,
+    warehouseId: '',
+    locationId: '',
+    initialQuantity: '',
   })
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    Promise.all([fetchProducts(), fetchCategories()])
+    Promise.all([fetchProducts(), fetchCategories(), fetchWarehouses()])
   }, [])
+
+  useEffect(() => {
+    if (formData.warehouseId) {
+      fetchLocations(parseInt(formData.warehouseId))
+    }
+  }, [formData.warehouseId])
 
   const fetchProducts = async () => {
     try {
@@ -66,6 +78,26 @@ export default function ProductsPage() {
     }
   }
 
+  const fetchWarehouses = async () => {
+    try {
+      const response = await fetch('/api/warehouses')
+      const data = await response.json()
+      setWarehouses(data.data || [])
+    } catch (error) {
+      console.error('Failed to fetch warehouses:', error)
+    }
+  }
+
+  const fetchLocations = async (warehouseId: number) => {
+    try {
+      const response = await fetch(`/api/locations?warehouseId=${warehouseId}`)
+      const data = await response.json()
+      setLocations(data.data || [])
+    } catch (error) {
+      console.error('Failed to fetch locations:', error)
+    }
+  }
+
   const handleCreate = () => {
     setEditingProduct(null)
     setFormData({
@@ -73,8 +105,13 @@ export default function ProductsPage() {
       sku: '',
       categoryId: '',
       unitOfMeasure: 'Units',
+      price: '',
       isActive: true,
+      warehouseId: '',
+      locationId: '',
+      initialQuantity: '',
     })
+    setLocations([])
     setShowModal(true)
   }
 
@@ -85,7 +122,11 @@ export default function ProductsPage() {
       sku: product.sku,
       categoryId: product.category?.id.toString() || '',
       unitOfMeasure: product.unitOfMeasure,
+      price: '',
       isActive: product.isActive,
+      warehouseId: '',
+      locationId: '',
+      initialQuantity: '',
     })
     setShowModal(true)
   }
@@ -110,6 +151,19 @@ export default function ProductsPage() {
 
       if (formData.categoryId) {
         submitData.categoryId = parseInt(formData.categoryId)
+      }
+
+      if (formData.price) {
+        submitData.price = parseFloat(formData.price)
+      }
+
+      // Only include initial stock for new products
+      if (!editingProduct && formData.warehouseId && formData.locationId && formData.initialQuantity) {
+        submitData.initialStock = {
+          warehouseId: parseInt(formData.warehouseId),
+          locationId: parseInt(formData.locationId),
+          quantity: parseFloat(formData.initialQuantity),
+        }
       }
 
       const response = await fetch(url, {
@@ -342,6 +396,70 @@ export default function ProductsPage() {
                 required
                 placeholder="Units, Kg, Liters, etc."
               />
+
+              <Input
+                label="Price (Optional)"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                placeholder="0.00"
+              />
+
+              {!editingProduct && (
+                <>
+                  <div className="border-t pt-4 mt-4">
+                    <h4 className="text-sm font-medium text-gray-900 mb-3">Initial Stock (Optional)</h4>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Warehouse
+                        </label>
+                        <select
+                          value={formData.warehouseId}
+                          onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value, locationId: '' })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                          <option value="">-- Select Warehouse --</option>
+                          {warehouses.map((wh) => (
+                            <option key={wh.id} value={wh.id}>{wh.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Location
+                        </label>
+                        <select
+                          value={formData.locationId}
+                          onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          disabled={!formData.warehouseId}
+                        >
+                          <option value="">-- Select Location --</option>
+                          {locations.map((loc) => (
+                            <option key={loc.id} value={loc.id}>{loc.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <Input
+                        label="Initial Quantity"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.initialQuantity}
+                        onChange={(e) => setFormData({ ...formData, initialQuantity: e.target.value })}
+                        placeholder="0"
+                        disabled={!formData.locationId}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="flex items-center">
                 <input

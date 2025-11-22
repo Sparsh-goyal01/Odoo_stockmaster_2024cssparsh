@@ -44,6 +44,7 @@ export const productFormSchema = z.object({
   sku: z.string().min(1, 'SKU is required').max(100),
   categoryId: z.number().optional().nullable(),
   unitOfMeasure: z.string().min(1, 'Unit of measure is required').max(50),
+  price: z.number().min(0, 'Price must be 0 or greater').optional().nullable(),
   isActive: z.boolean().default(true),
   initialStock: initialStockSchema.optional(),
   reorderRule: z.object({

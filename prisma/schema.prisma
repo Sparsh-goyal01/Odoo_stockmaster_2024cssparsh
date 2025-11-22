@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                Int               @id @default(autoincrement())
+  name              String            @db.VarChar(255)
+  email             String            @unique @db.VarChar(255)
+  passwordHash      String            @db.VarChar(255)
+  role              String            @default("USER") @db.VarChar(50)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  otpTokens         OtpToken[]
+  createdOperations Operation[]       @relation("CreatedBy")
+  validatedOperations Operation[]     @relation("ValidatedBy")
+  stockMoves        StockMove[]
+  
+  @@map("users")
+}
+
+model OtpToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  code      String   @db.VarChar(10)
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@map("otp_tokens")
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  products    Product[]
+  
+  @@map("categories")
+}
+
+model Product {
+  id              Int             @id @default(autoincrement())
+  name            String          @db.VarChar(255)
+  sku             String          @unique @db.VarChar(100)
+  categoryId      Int?
+  unitOfMeasure   String          @db.VarChar(50)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  category        Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  reorderRules    ReorderRule[]
+  stockQuants     StockQuant[]
+  operationLines  OperationLine[]
+  stockMoves      StockMove[]
+  
+  @@index([categoryId])
+  @@index([sku])
+  @@map("products")
+}
+
+model Warehouse {
+  id              Int            @id @default(autoincrement())
+  name            String         @db.VarChar(255)
+  code            String         @unique @db.VarChar(50)
+  address         String?        @db.Text
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  locations       Location[]
+  reorderRules    ReorderRule[]
+  operations      Operation[]
+  
+  @@index([code])
+  @@map("warehouses")
+}
+
+enum LocationType {
+  INTERNAL
+  VENDOR
+  CUSTOMER
+  SCRAP
+}
+
+model Location {
+  id                      Int             @id @default(autoincrement())
+  warehouseId             Int
+  name                    String          @db.VarChar(255)
+  type                    LocationType    @default(INTERNAL)
+  isActive                Boolean         @default(true)
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  
+  warehouse               Warehouse       @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  stockQuants             StockQuant[]
+  operationsAsSource      Operation[]     @relation("SourceLocation")
+  operationsAsDestination Operation[]     @relation("DestinationLocation")
+  operationLinesAsSource  OperationLine[] @relation("LineSourceLocation")
+  operationLinesAsDestination OperationLine[] @relation("LineDestinationLocation")
+  stockMovesFrom          StockMove[]     @relation("FromLocation")
+  stockMovesTo            StockMove[]     @relation("ToLocation")
+  
+  @@index([warehouseId])
+  @@map("locations")
+}
+
+model ReorderRule {
+  id              Int       @id @default(autoincrement())
+  productId       Int
+  warehouseId     Int?
+  minQty          Decimal   @db.Decimal(18, 4)
+  reorderQty      Decimal   @db.Decimal(18, 4)
+  preferredVendor String?   @db.VarChar(255)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse       Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  
+  @@index([productId])
+  @@index([warehouseId])
+  @@map("reorder_rules")
+}
+
+model StockQuant {
+  id               Int      @id @default(autoincrement())
+  productId        Int
+  locationId       Int
+  quantity         Decimal  @db.Decimal(18, 4)
+  reservedQuantity Decimal  @default(0) @db.Decimal(18, 4)
+  updatedAt        DateTime @updatedAt
+  
+  product          Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  location         Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  
+  @@unique([productId, locationId])
+  @@index([productId])
+  @@index([locationId])
+  @@map("stock_quants")
+}
+
+enum OperationType {
+  RECEIPT
+  DELIVERY
+  TRANSFER
+  ADJUSTMENT
+}
+
+enum OperationStatus {
+  DRAFT
+  WAITING
+  READY
+  DONE
+  CANCELED
+}
+
+model Operation {
+  id                    Int              @id @default(autoincrement())
+  opType                OperationType
+  documentNumber        String           @unique @db.VarChar(50)
+  status                OperationStatus  @default(DRAFT)
+  warehouseId           Int
+  sourceLocationId      Int?
+  destinationLocationId Int?
+  partnerName           String?          @db.VarChar(255)
+  createdBy             Int
+  validatedBy           Int?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  validatedAt           DateTime?
+  notes                 String?          @db.Text
+  
+  warehouse             Warehouse        @relation(fields: [warehouseId], references: [id])
+  sourceLocation        Location?        @relation("SourceLocation", fields: [sourceLocationId], references: [id])
+  destinationLocation   Location?        @relation("DestinationLocation", fields: [destinationLocationId], references: [id])
+  creator               User             @relation("CreatedBy", fields: [createdBy], references: [id])
+  validator             User?            @relation("ValidatedBy", fields: [validatedBy], references: [id])
+  lines                 OperationLine[]
+  stockMoves            StockMove[]
+  
+  @@index([opType])
+  @@index([status])
+  @@index([warehouseId])
+  @@index([createdAt])
+  @@index([documentNumber])
+  @@map("operations")
+}
+
+model OperationLine {
+  id                    Int       @id @default(autoincrement())
+  operationId           Int
+  productId             Int
+  quantity              Decimal   @db.Decimal(18, 4)
+  unitOfMeasure         String    @db.VarChar(50)
+  sourceLocationId      Int?
+  destinationLocationId Int?
+  remarks               String?   @db.Text
+  
+  operation             Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  product               Product   @relation(fields: [productId], references: [id])
+  sourceLocation        Location? @relation("LineSourceLocation", fields: [sourceLocationId], references: [id])
+  destinationLocation   Location? @relation("LineDestinationLocation", fields: [destinationLocationId], references: [id])
+  
+  @@index([operationId])
+  @@index([productId])
+  @@map("operation_lines")
+}
+
+model StockMove {
+  id             Int       @id @default(autoincrement())
+  operationId    Int
+  productId      Int
+  fromLocationId Int?
+  toLocationId   Int?
+  quantity       Decimal   @db.Decimal(18, 4)
+  moveDate       DateTime  @default(now())
+  userId         Int
+  reason         String?   @db.VarChar(255)
+  
+  operation      Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  product        Product   @relation(fields: [productId], references: [id])
+  fromLocation   Location? @relation("FromLocation", fields: [fromLocationId], references: [id])
+  toLocation     Location? @relation("ToLocation", fields: [toLocationId], references: [id])
+  user           User      @relation(fields: [userId], references: [id])
+  
+  @@index([productId])
+  @@index([moveDate])
+  @@index([fromLocationId])
+  @@index([toLocationId])
+  @@index([operationId])
+  @@map("stock_moves")
+}

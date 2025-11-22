@@ -183,7 +183,7 @@ export default function DeliveriesPage() {
     
     // Set lines
     setLines(delivery.lines.map(line => ({
-      productId: line.product.id,
+      productId: line.product?.id || 0,
       quantity: Number(line.quantity),
       unitOfMeasure: line.unitOfMeasure,
       sourceLocationId: line.sourceLocation?.id || null,

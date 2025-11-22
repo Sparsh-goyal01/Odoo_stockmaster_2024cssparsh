@@ -184,7 +184,7 @@ export default function TransfersPage() {
     
     // Set lines
     setLines(transfer.lines.map(line => ({
-      productId: line.product!.id,
+      productId: line.product?.id || 0,
       quantity: Number(line.quantity),
       unitOfMeasure: line.unitOfMeasure,
       sourceLocationId: line.sourceLocation?.id || null,

@@ -183,7 +183,7 @@ export default function ReceiptsPage() {
     
     // Set lines
     setLines(receipt.lines.map(line => ({
-      productId: line.product.id,
+      productId: line.product?.id || 0,
       quantity: Number(line.quantity),
       unitOfMeasure: line.unitOfMeasure,
       destinationLocationId: line.destinationLocation?.id || null,

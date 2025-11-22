@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createOTPToken } from '@/lib/auth'
 import { forgotPasswordSchema } from '@/lib/validations'
+import { sendOTPEmail } from '@/lib/email'
 
 export async function POST(request: Request) {
   try {
@@ -32,9 +33,8 @@ export async function POST(request: Request) {
     // Generate OTP
     const otp = await createOTPToken(user.id)
 
-    // TODO: Send OTP via email
-    // For now, we'll just log it (in production, implement email sending)
-    console.log(`OTP for ${email}: ${otp}`)
+    // Send OTP via email
+    await sendOTPEmail(email, otp)
 
     return NextResponse.json({
       message: 'If the email exists, an OTP has been sent',

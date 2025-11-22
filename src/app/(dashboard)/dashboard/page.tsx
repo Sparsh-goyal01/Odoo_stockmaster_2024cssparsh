@@ -1,15 +1,66 @@
 import Card from '@/components/ui/Card'
+import { cookies } from 'next/headers'
+
+interface DashboardData {
+  kpis: {
+    totalProducts: number
+    lowStockItems: number
+    outOfStockItems: number
+    pendingReceipts: number
+    pendingDeliveries: number
+    pendingTransfers: number
+    pendingAdjustments: number
+    totalPendingOperations: number
+  }
+  recentOperations: Array<{
+    id: number
+    documentNumber: string
+    opType: string
+    status: string
+    createdAt: string
+    warehouse: { name: string }
+    createdByUser: { name: string }
+  }>
+}
+
+async function fetchDashboardData(): Promise<DashboardData | null> {
+  try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get('token')?.value
+
+    if (!token) return null
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/dashboard/kpis`, {
+      headers: {
+        Cookie: `token=${token}`,
+      },
+      cache: 'no-store',
+    })
+
+    if (!response.ok) return null
+
+    return await response.json()
+  } catch (error) {
+    console.error('Failed to fetch dashboard data:', error)
+    return null
+  }
+}
 
 export default async function DashboardPage() {
-  // TODO: Fetch real KPIs from API
-  const kpis = {
+  const data = await fetchDashboardData()
+  
+  const kpis = data?.kpis || {
     totalProducts: 0,
     lowStockItems: 0,
     outOfStockItems: 0,
     pendingReceipts: 0,
     pendingDeliveries: 0,
-    internalTransfers: 0,
+    pendingTransfers: 0,
+    pendingAdjustments: 0,
+    totalPendingOperations: 0,
   }
+  
+  const recentOperations = data?.recentOperations || []
 
   return (
     <div className="space-y-6">
@@ -92,9 +143,9 @@ export default async function DashboardPage() {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Internal Transfers</p>
+              <p className="text-sm font-medium text-gray-600">Pending Transfers</p>
               <p className="mt-2 text-3xl font-semibold text-purple-600">
-                {kpis.internalTransfers}
+                {kpis.pendingTransfers}
               </p>
             </div>
             <div className="rounded-full bg-purple-100 p-3">
@@ -106,10 +157,58 @@ export default async function DashboardPage() {
 
       {/* Recent Activity */}
       <Card title="Recent Activity" description="Latest inventory operations">
-        <div className="text-center py-8 text-gray-500">
-          <p>No recent activity</p>
-          <p className="text-sm mt-2">Start by creating products, warehouses, and locations</p>
-        </div>
+        {recentOperations.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <p>No recent activity</p>
+            <p className="text-sm mt-2">Start by creating products, warehouses, and locations</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Document</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Warehouse</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created By</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {recentOperations.map((op) => (
+                  <tr key={op.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {op.documentNumber}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {op.opType}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        op.status === 'DONE' ? 'bg-green-100 text-green-800' :
+                        op.status === 'CANCELED' ? 'bg-red-100 text-red-800' :
+                        op.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {op.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {op.warehouse.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {op.createdByUser.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(op.createdAt).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
       {/* Getting Started */}

@@ -216,6 +216,128 @@ export default function ReceiptsPage() {
     }
   }
 
+  const handlePrint = (receipt: Receipt) => {
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      toast.error('Please allow popups to print receipts')
+      return
+    }
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Receipt - ${receipt.documentNumber}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+            .header h1 { margin: 0; font-size: 28px; }
+            .header p { margin: 5px 0; color: #666; }
+            .info-section { margin-bottom: 20px; }
+            .info-row { display: flex; margin-bottom: 8px; }
+            .info-label { font-weight: bold; width: 150px; }
+            .info-value { flex: 1; }
+            .status-badge { display: inline-block; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+            .status-draft { background: #fef3c7; color: #92400e; }
+            .status-done { background: #d1fae5; color: #065f46; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background-color: #f3f4f6; font-weight: bold; }
+            .total-row { font-weight: bold; background-color: #f9fafb; }
+            .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #666; font-size: 12px; }
+            @media print {
+              body { padding: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>RECEIPT</h1>
+            <p>Document #: ${receipt.documentNumber}</p>
+          </div>
+          
+          <div class="info-section">
+            <div class="info-row">
+              <div class="info-label">Status:</div>
+              <div class="info-value">
+                <span class="status-badge status-${receipt.status.toLowerCase()}">${receipt.status}</span>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Partner:</div>
+              <div class="info-value">${receipt.partnerName || '-'}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Warehouse:</div>
+              <div class="info-value">${receipt.warehouse.name}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Destination:</div>
+              <div class="info-value">${receipt.destinationLocation?.name || '-'}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Date:</div>
+              <div class="info-value">${new Date(receipt.createdAt).toLocaleString()}</div>
+            </div>
+            ${receipt.notes ? `
+            <div class="info-row">
+              <div class="info-label">Notes:</div>
+              <div class="info-value">${receipt.notes}</div>
+            </div>
+            ` : ''}
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 10%">#</th>
+                <th style="width: 20%">Product SKU</th>
+                <th style="width: 30%">Product Name</th>
+                <th style="width: 15%">Quantity</th>
+                <th style="width: 10%">Unit</th>
+                <th style="width: 15%">Location</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${receipt.lines.map((line, index) => `
+                <tr>
+                  <td>${index + 1}</td>
+                  <td>${line.product?.sku || '-'}</td>
+                  <td>${line.product?.name || '-'}</td>
+                  <td>${line.quantity}</td>
+                  <td>${line.unitOfMeasure}</td>
+                  <td>${line.destinationLocation?.name || '-'}</td>
+                </tr>
+              `).join('')}
+              <tr class="total-row">
+                <td colspan="3">Total Items</td>
+                <td colspan="3">${receipt.lines.length} line(s)</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="footer">
+            <p>Printed on ${new Date().toLocaleString()}</p>
+            <p>StockMaster Inventory Management System</p>
+          </div>
+
+          <div class="no-print" style="margin-top: 20px; text-align: center;">
+            <button onclick="window.print()" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+              Print
+            </button>
+            <button onclick="window.close()" style="padding: 10px 20px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-left: 10px;">
+              Close
+            </button>
+          </div>
+        </body>
+      </html>
+    `
+
+    printWindow.document.write(printContent)
+    printWindow.document.close()
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -363,7 +485,7 @@ export default function ReceiptsPage() {
                       {new Date(receipt.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                      {receipt.status === 'DRAFT' && (
+                      {receipt.status === 'DRAFT' ? (
                         <>
                           <button
                             onClick={() => handleEdit(receipt)}
@@ -384,6 +506,13 @@ export default function ReceiptsPage() {
                             Delete
                           </button>
                         </>
+                      ) : (
+                        <button
+                          onClick={() => handlePrint(receipt)}
+                          className="text-purple-600 hover:text-purple-900"
+                        >
+                          Print
+                        </button>
                       )}
                     </td>
                   </tr>

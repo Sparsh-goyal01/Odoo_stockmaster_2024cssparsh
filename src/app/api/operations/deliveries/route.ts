@@ -153,6 +153,36 @@ export async function POST(request: Request) {
       )
     }
 
+    // Check stock availability for each line
+    for (const line of lines) {
+      const locationId = line.sourceLocationId || sourceLocationId
+      
+      if (locationId) {
+        const stockQuant = await prisma.stockQuant.findUnique({
+          where: {
+            productId_locationId: {
+              productId: line.productId,
+              locationId: locationId,
+            },
+          },
+        })
+
+        const product = products.find(p => p.id === line.productId)
+        const availableQty = stockQuant 
+          ? Number(stockQuant.quantity) - Number(stockQuant.reservedQuantity)
+          : 0
+
+        if (availableQty < Number(line.quantity)) {
+          return NextResponse.json(
+            { 
+              error: `Insufficient stock for ${product?.name || 'product'}. Available: ${availableQty}, Required: ${line.quantity}` 
+            },
+            { status: 400 }
+          )
+        }
+      }
+    }
+
     // Generate document number
     const count = await prisma.operation.count({
       where: { opType: 'DELIVERY' },

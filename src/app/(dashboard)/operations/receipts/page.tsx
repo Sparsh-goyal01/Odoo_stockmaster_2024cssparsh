@@ -212,6 +212,29 @@ export default function ReceiptsPage() {
     }
   }
 
+  const handleValidate = async (receiptId: number) => {
+    if (!confirm('Are you sure you want to validate this receipt? This will increase stock levels.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/operations/receipts/${receiptId}/validate`, {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to validate receipt')
+      }
+
+      toast.success('Receipt validated successfully! Stock has been increased.')
+      fetchReceipts()
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'DRAFT': return 'info'
@@ -258,6 +281,7 @@ export default function ReceiptsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -282,6 +306,16 @@ export default function ReceiptsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(receipt.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {receipt.status === 'DRAFT' && (
+                        <button
+                          onClick={() => handleValidate(receipt.id)}
+                          className="text-green-600 hover:text-green-900"
+                        >
+                          Validate
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

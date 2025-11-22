@@ -30,11 +30,27 @@ const navigation = [
   { name: 'Profile', href: '/profile', icon: '👤' },
 ]
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean
+  onClose?: () => void
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
 
+  const handleLinkClick = () => {
+    if (onClose) onClose()
+  }
+
   return (
-    <div className="flex h-screen w-64 flex-col bg-gray-900">
+    <div
+      className={cn(
+        'flex h-screen w-64 flex-col bg-gray-900 transition-transform duration-300 ease-in-out',
+        'lg:translate-x-0 lg:static lg:z-0',
+        'fixed z-50',
+        isOpen ? 'translate-x-0' : '-translate-x-full'
+      )}
+    >
       {/* Logo */}
       <div className="flex h-16 items-center justify-center border-b border-gray-800">
         <h1 className="text-2xl font-bold text-white">StockMaster</h1>
@@ -55,6 +71,7 @@ export default function Sidebar() {
                     <Link
                       key={child.href}
                       href={child.href}
+                      onClick={handleLinkClick}
                       className={cn(
                         'block rounded-md px-3 py-2 text-sm font-medium transition-colors',
                         pathname === child.href
@@ -70,6 +87,7 @@ export default function Sidebar() {
             ) : (
               <Link
                 href={item.href}
+                onClick={handleLinkClick}
                 className={cn(
                   'flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors',
                   pathname === item.href

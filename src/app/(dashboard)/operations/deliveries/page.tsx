@@ -212,6 +212,29 @@ export default function DeliveriesPage() {
     }
   }
 
+  const handleValidate = async (deliveryId: number) => {
+    if (!confirm('Are you sure you want to validate this delivery? This will decrease stock levels.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/operations/deliveries/${deliveryId}/validate`, {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to validate delivery')
+      }
+
+      toast.success('Delivery validated successfully! Stock has been decreased.')
+      fetchDeliveries()
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'DRAFT': return 'info'
@@ -258,6 +281,7 @@ export default function DeliveriesPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -282,6 +306,16 @@ export default function DeliveriesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(delivery.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {delivery.status === 'DRAFT' && (
+                        <button
+                          onClick={() => handleValidate(delivery.id)}
+                          className="text-green-600 hover:text-green-900"
+                        >
+                          Validate
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

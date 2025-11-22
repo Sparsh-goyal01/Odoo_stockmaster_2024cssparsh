@@ -20,6 +20,7 @@ export async function GET(request: Request) {
 
     // Build where clause
     const where: any = {
+      userId: user.userId,
       AND: [],
     }
 
@@ -116,9 +117,12 @@ export async function POST(request: Request) {
 
     const { name, sku, categoryId, unitOfMeasure, isActive, initialStock, reorderRule } = validation.data
 
-    // Check if SKU already exists
-    const existingProduct = await prisma.product.findUnique({
-      where: { sku },
+    // Check if SKU already exists for this user
+    const existingProduct = await prisma.product.findFirst({
+      where: { 
+        sku,
+        userId: user.userId 
+      },
     })
 
     if (existingProduct) {
@@ -160,6 +164,7 @@ export async function POST(request: Request) {
           categoryId: categoryId || null,
           unitOfMeasure,
           isActive: isActive !== undefined ? isActive : true,
+          userId: user.userId,
         },
       })
 

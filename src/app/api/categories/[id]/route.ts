@@ -19,8 +19,11 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid category ID' }, { status: 400 })
     }
 
-    const category = await prisma.category.findUnique({
-      where: { id: categoryId },
+    const category = await prisma.category.findFirst({
+      where: { 
+        id: categoryId,
+        userId: user.userId 
+      },
       include: {
         products: {
           orderBy: { name: 'asc' },
@@ -73,9 +76,12 @@ export async function PUT(
 
     const { name, description } = validation.data
 
-    // Check if category exists
-    const existingCategory = await prisma.category.findUnique({
-      where: { id: categoryId },
+    // Check if category exists and belongs to user
+    const existingCategory = await prisma.category.findFirst({
+      where: { 
+        id: categoryId,
+        userId: user.userId 
+      },
     })
 
     if (!existingCategory) {
@@ -122,9 +128,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid category ID' }, { status: 400 })
     }
 
-    // Check if category exists
-    const category = await prisma.category.findUnique({
-      where: { id: categoryId },
+    // Check if category exists and belongs to user
+    const category = await prisma.category.findFirst({
+      where: { 
+        id: categoryId,
+        userId: user.userId 
+      },
       include: { products: true },
     })
 

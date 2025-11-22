@@ -17,6 +17,9 @@ model User {
   updatedAt         DateTime          @updatedAt
   
   otpTokens         OtpToken[]
+  warehouses        Warehouse[]       @relation("UserWarehouses")
+  categories        Category[]        @relation("UserCategories")
+  products          Product[]         @relation("UserProducts")
   createdOperations Operation[]       @relation("CreatedBy")
   validatedOperations Operation[]     @relation("ValidatedBy")
   stockMoves        StockMove[]
@@ -42,49 +45,58 @@ model Category {
   id          Int       @id @default(autoincrement())
   name        String    @db.VarChar(255)
   description String?   @db.Text
+  userId      Int
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
+  user        User      @relation("UserCategories", fields: [userId], references: [id], onDelete: Cascade)
   products    Product[]
   
+  @@index([userId])
   @@map("categories")
 }
 
 model Product {
   id              Int             @id @default(autoincrement())
   name            String          @db.VarChar(255)
-  sku             String          @unique @db.VarChar(100)
+  sku             String          @db.VarChar(100)
   categoryId      Int?
+  userId          Int
   unitOfMeasure   String          @db.VarChar(50)
   isActive        Boolean         @default(true)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   
+  user            User            @relation("UserProducts", fields: [userId], references: [id], onDelete: Cascade)
   category        Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   reorderRules    ReorderRule[]
   stockQuants     StockQuant[]
   operationLines  OperationLine[]
   stockMoves      StockMove[]
   
+  @@unique([sku, userId])
   @@index([categoryId])
-  @@index([sku])
+  @@index([userId])
   @@map("products")
 }
 
 model Warehouse {
   id              Int            @id @default(autoincrement())
   name            String         @db.VarChar(255)
-  code            String         @unique @db.VarChar(50)
+  code            String         @db.VarChar(50)
   address         String?        @db.Text
+  userId          Int
   isActive        Boolean        @default(true)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   
+  user            User           @relation("UserWarehouses", fields: [userId], references: [id], onDelete: Cascade)
   locations       Location[]
   reorderRules    ReorderRule[]
   operations      Operation[]
   
-  @@index([code])
+  @@unique([code, userId])
+  @@index([userId])
   @@map("warehouses")
 }
 

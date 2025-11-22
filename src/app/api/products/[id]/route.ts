@@ -20,8 +20,11 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid product ID' }, { status: 400 })
     }
 
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
+    const product = await prisma.product.findFirst({
+      where: { 
+        id: productId,
+        userId: user.userId 
+      },
       include: {
         category: true,
         stockQuants: {
@@ -92,19 +95,25 @@ export async function PUT(
 
     const { name, sku, categoryId, unitOfMeasure, isActive } = validation.data
 
-    // Check if product exists
-    const existingProduct = await prisma.product.findUnique({
-      where: { id: productId },
+    // Check if product exists and belongs to user
+    const existingProduct = await prisma.product.findFirst({
+      where: { 
+        id: productId,
+        userId: user.userId 
+      },
     })
 
     if (!existingProduct) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    // Check if SKU is being changed and if it's already taken
+    // Check if SKU is being changed and if it's already taken by another user's product
     if (sku !== existingProduct.sku) {
-      const skuExists = await prisma.product.findUnique({
-        where: { sku },
+      const skuExists = await prisma.product.findFirst({
+        where: { 
+          sku,
+          userId: user.userId 
+        },
       })
 
       if (skuExists) {
@@ -164,9 +173,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid product ID' }, { status: 400 })
     }
 
-    // Check if product exists
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
+    // Check if product exists and belongs to user
+    const product = await prisma.product.findFirst({
+      where: { 
+        id: productId,
+        userId: user.userId 
+      },
       include: { stockQuants: true },
     })
 

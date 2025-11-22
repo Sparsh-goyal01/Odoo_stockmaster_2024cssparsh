@@ -14,7 +14,9 @@ export async function GET(request: Request) {
     const warehouseId = searchParams.get('warehouseId')
     const includeInactive = searchParams.get('includeInactive') === 'true'
 
-    const where: any = {}
+    const where: any = {
+      userId: user.userId,
+    }
 
     if (!includeInactive) {
       where.isActive = true
@@ -63,9 +65,12 @@ export async function POST(request: Request) {
 
     const { name, code, address, isActive } = validation.data
 
-    // Check if code already exists
-    const existingWarehouse = await prisma.warehouse.findUnique({
-      where: { code },
+    // Check if code already exists for this user
+    const existingWarehouse = await prisma.warehouse.findFirst({
+      where: { 
+        code,
+        userId: user.userId,
+      },
     })
 
     if (existingWarehouse) {
@@ -81,6 +86,7 @@ export async function POST(request: Request) {
         name,
         code,
         address: address || null,
+        userId: user.userId,
         isActive: isActive !== undefined ? isActive : true,
       },
       include: {

@@ -14,7 +14,11 @@ export async function GET(request: Request) {
     const warehouseId = searchParams.get('warehouseId')
     const includeInactive = searchParams.get('includeInactive') === 'true'
 
-    const where: any = {}
+    const where: any = {
+      warehouse: {
+        userId: user.userId,
+      },
+    }
 
     if (!includeInactive) {
       where.isActive = true
@@ -64,14 +68,17 @@ export async function POST(request: Request) {
 
     const { warehouseId, name, type, isActive } = validation.data
 
-    // Check if warehouse exists
-    const warehouse = await prisma.warehouse.findUnique({
-      where: { id: warehouseId },
+    // Check if warehouse exists and belongs to user
+    const warehouse = await prisma.warehouse.findFirst({
+      where: { 
+        id: warehouseId,
+        userId: user.userId 
+      },
     })
 
     if (!warehouse) {
       return NextResponse.json(
-        { error: 'Selected warehouse does not exist' },
+        { error: 'Selected warehouse does not exist or you do not have access' },
         { status: 400 }
       )
     }

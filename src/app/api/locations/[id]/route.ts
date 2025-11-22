@@ -19,8 +19,13 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid location ID' }, { status: 400 })
     }
 
-    const location = await prisma.location.findUnique({
-      where: { id: locationId },
+    const location = await prisma.location.findFirst({
+      where: { 
+        id: locationId,
+        warehouse: {
+          userId: user.userId,
+        },
+      },
       include: {
         warehouse: true,
         stockQuants: {
@@ -77,23 +82,31 @@ export async function PUT(
 
     const { warehouseId, name, type, isActive } = validation.data
 
-    // Check if location exists
-    const existingLocation = await prisma.location.findUnique({
-      where: { id: locationId },
+    // Check if location exists and belongs to user's warehouse
+    const existingLocation = await prisma.location.findFirst({
+      where: { 
+        id: locationId,
+        warehouse: {
+          userId: user.userId,
+        },
+      },
     })
 
     if (!existingLocation) {
       return NextResponse.json({ error: 'Location not found' }, { status: 404 })
     }
 
-    // Check if warehouse exists
-    const warehouse = await prisma.warehouse.findUnique({
-      where: { id: warehouseId },
+    // Check if warehouse exists and belongs to user
+    const warehouse = await prisma.warehouse.findFirst({
+      where: { 
+        id: warehouseId,
+        userId: user.userId 
+      },
     })
 
     if (!warehouse) {
       return NextResponse.json(
-        { error: 'Selected warehouse does not exist' },
+        { error: 'Selected warehouse does not exist or you do not have access' },
         { status: 400 }
       )
     }
@@ -141,9 +154,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid location ID' }, { status: 400 })
     }
 
-    // Check if location exists
-    const location = await prisma.location.findUnique({
-      where: { id: locationId },
+    // Check if location exists and belongs to user's warehouse
+    const location = await prisma.location.findFirst({
+      where: { 
+        id: locationId,
+        warehouse: {
+          userId: user.userId,
+        },
+      },
       include: { stockQuants: true },
     })
 

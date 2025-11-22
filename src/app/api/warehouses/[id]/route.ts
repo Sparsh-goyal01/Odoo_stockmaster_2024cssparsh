@@ -19,8 +19,11 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid warehouse ID' }, { status: 400 })
     }
 
-    const warehouse = await prisma.warehouse.findUnique({
-      where: { id: warehouseId },
+    const warehouse = await prisma.warehouse.findFirst({
+      where: { 
+        id: warehouseId,
+        userId: user.userId,
+      },
       include: {
         locations: {
           orderBy: { name: 'asc' },
@@ -73,19 +76,25 @@ export async function PUT(
 
     const { name, code, address, isActive } = validation.data
 
-    // Check if warehouse exists
-    const existingWarehouse = await prisma.warehouse.findUnique({
-      where: { id: warehouseId },
+    // Check if warehouse exists and belongs to user
+    const existingWarehouse = await prisma.warehouse.findFirst({
+      where: { 
+        id: warehouseId,
+        userId: user.userId,
+      },
     })
 
     if (!existingWarehouse) {
       return NextResponse.json({ error: 'Warehouse not found' }, { status: 404 })
     }
 
-    // Check if code is being changed and if it's already taken
+    // Check if code is being changed and if it's already taken by this user
     if (code !== existingWarehouse.code) {
-      const codeExists = await prisma.warehouse.findUnique({
-        where: { code },
+      const codeExists = await prisma.warehouse.findFirst({
+        where: { 
+          code,
+          userId: user.userId,
+        },
       })
 
       if (codeExists) {
@@ -138,9 +147,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid warehouse ID' }, { status: 400 })
     }
 
-    // Check if warehouse exists
-    const warehouse = await prisma.warehouse.findUnique({
-      where: { id: warehouseId },
+    // Check if warehouse exists and belongs to user
+    const warehouse = await prisma.warehouse.findFirst({
+      where: { 
+        id: warehouseId,
+        userId: user.userId,
+      },
       include: {
         locations: true,
         operations: true,

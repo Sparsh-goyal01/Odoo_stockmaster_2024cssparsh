@@ -11,6 +11,9 @@ export async function GET() {
     }
 
     const categories = await prisma.category.findMany({
+      where: {
+        userId: user.userId,
+      },
       include: {
         _count: {
           select: { products: true },
@@ -52,6 +55,7 @@ export async function POST(request: Request) {
       data: {
         name,
         description: description || null,
+        userId: user.userId,
       },
       include: {
         _count: {
